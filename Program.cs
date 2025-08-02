@@ -91,15 +91,20 @@ public class Game {
 
     public void SpawnEntity() {
         int FreeID = EntityManager.GetFreeEntityID();
+        if (FreeID == -1) {
+            return;
+        }
         EntityManager.AddEntity(FreeID);
         ComponentManager.CreateEntityComponents(FreeID, 1, 1, 10);
     }
 
     public void MoveEntities() {
-        for (int i = 0; i < EntityManager.Entities.Count(); i++) {
-            ComponentManager.PositionArray[i].x += 1;
-            ComponentManager.PositionArray[i].y += 1;
+        foreach (Entity entity in EntityManager.Entities) {
+            int id = entity.EntityID;
+            ComponentManager.PositionArray[id].x += 1;
+            ComponentManager.PositionArray[id].y += 1;
         }
+
     }
 
     public void DamageEntity(int ID) {
