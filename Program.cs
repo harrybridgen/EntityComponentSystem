@@ -6,8 +6,8 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement.Rebar;
 public class Settings {
     public const int ScreenWidth = 1000;
     public const int ScreenHeight = 1000;
-    public const int EntitySize = 4;
-    public const int EntitiesToSpawn = 30000;
+    public const int EntitySize = 3;
+    public const int EntitiesToSpawn = 50000;
     public const int EntitySpeedMin = -1;
     public const int EntitySpeedMax = 2;
 }
@@ -101,9 +101,6 @@ public class ComponentManager {
         HealthArray[entityID].health = health;
         ColourArray[entityID].colourIndex = (byte)rand.Next(0, Colours.Palette.Length);
     }
-
-    public ref Position GetEntityPositionRef(int entityID) => ref PositionArray[entityID];
-    public ref Health GetEntityHealthRef(int entityID) => ref HealthArray[entityID];
 }
 
 // -------------------- GAME CLASS --------------------
