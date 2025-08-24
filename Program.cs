@@ -1,8 +1,8 @@
 ﻿public class Settings {
     public const int ScreenWidth = 1000;
     public const int ScreenHeight = 1000;
-    public const int EntitySize = 3;
-    public const int EntitiesToSpawn = 50000;
+    public const int EntitySize = 4;
+    public const int EntitiesToSpawn = 10000;
     public const int EntitySpeedMin = -1;
     public const int EntitySpeedMax = 2;
 }
@@ -16,7 +16,6 @@ public static class Colours {
 }
 
 public class Program {
-    [STAThread]
     static void Main() {
         Application.EnableVisualStyles();
         Application.Run(new GameWindow());
