@@ -1,9 +1,4 @@
-﻿using System;
-using System.Drawing;
-using System.Windows.Forms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.Rebar;
-
-public class Settings {
+﻿public class Settings {
     public const int ScreenWidth = 1000;
     public const int ScreenHeight = 1000;
     public const int EntitySize = 3;
