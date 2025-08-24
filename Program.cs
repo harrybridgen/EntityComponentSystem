@@ -1,113 +1,189 @@
-﻿public class Program {
-    static void Main(String[] args) {
-        Game game = new Game();
-        game.SpawnEntity();
-        Console.WriteLine("Position: " + game.ComponentManager.GetEntityPosition(0).x + ", " + game.ComponentManager.GetEntityPosition(0).y);
-        game.MoveEntities();
-        Console.WriteLine("Position: " + game.ComponentManager.GetEntityPosition(0).x + ", " + game.ComponentManager.GetEntityPosition(0).y);
-        Console.WriteLine("Health: " + game.ComponentManager.GetEntityHealth(0).health);
-        game.DamageEntity(0);
-        Console.WriteLine("Health: " + game.ComponentManager.GetEntityHealth(0).health);
+﻿using System;
+using System.Drawing;
+using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.Rebar;
 
+public class Settings {
+    public const int ScreenWidth = 1000;
+    public const int ScreenHeight = 1000;
+    public const int EntitySize = 4;
+    public const int EntitiesToSpawn = 30000;
+    public const int EntitySpeedMin = -1;
+    public const int EntitySpeedMax = 2;
+}
+public static class Colours {
+    public static readonly Brush[] Palette = new Brush[] {
+        Brushes.Red,
+        Brushes.Green,
+        Brushes.Blue,
+        Brushes.Orange,
+    };
+}
+
+public class Program {
+    [STAThread]
+    static void Main() {
+        Application.EnableVisualStyles();
+        Application.Run(new GameWindow());
     }
 }
 
+// -------------------- ECS STRUCTS --------------------
+
 public struct Entity {
-    public int EntityID { get; set; }
+    public int EntityID;
 }
 
 public struct Position {
-    public int x { get; set; }
-    public int y { get; set; }
+    public int x;
+    public int y;
 }
 
 public struct Health {
-    public int health { get; set; }
+    public int health;
 }
 
-public class EntityManager {
-    public List<Entity> FreeList { get; set; }
-    public List<Entity> Entities { get; set; }
-    public EntityManager(int MaxEntities) {
-        FreeList = new List<Entity>();
-        Entities = new List<Entity>();
-        for (int i = 0; i < MaxEntities; i++) {
-            Entity entity = new Entity();
-            entity.EntityID = i;
-            FreeList.Add(entity);
-        }
-    }
+public struct Colour {
+    public byte colourIndex;
+}
 
-    public void AddEntity(int EntityID) {
-        Entity Entity = new Entity();
-        Entity.EntityID = EntityID;
-        Entities.Add(Entity);
+
+// -------------------- ENTITY MANAGER --------------------
+
+public class EntityManager {
+    private readonly int[] freeList;
+    private int freeCount;
+    public Entity[] Entities { get; }
+    public int EntityCount { get; private set; }
+
+    public EntityManager(int maxEntities) {
+        freeList = new int[maxEntities];
+        Entities = new Entity[maxEntities];
+        EntityCount = 0;
+
+        for (int i = 0; i < maxEntities; i++) {
+            freeList[i] = maxEntities - i - 1;
+        }
+        freeCount = maxEntities;
     }
 
     public int GetFreeEntityID() {
-        if (FreeList.Count() == 0) {
-            Console.WriteLine("[SpawnEntity] No free entites!");
+        if (freeCount == 0) {
+            Console.WriteLine("[SpawnEntity] No free entities!");
             return -1;
         }
-        Entity entity = FreeList.First();
-        int ID = entity.EntityID;
-        FreeList.Remove(entity);
-        return ID;
+        return freeList[--freeCount];
+    }
+
+    public void AddEntity(int id) {
+        Entities[EntityCount++] = new Entity { EntityID = id };
     }
 }
+
+// -------------------- COMPONENT MANAGER --------------------
 
 public class ComponentManager {
-    public Position[] PositionArray { get; set; }
-    public Health[] HealthArray { get; set; }
-    public ComponentManager(int MaxEntities) {
-        PositionArray = new Position[MaxEntities];
-        HealthArray = new Health[MaxEntities];
+    private readonly Random rand;
+    public readonly Position[] PositionArray;
+    public readonly Health[] HealthArray;
+    public readonly Colour[] ColourArray;
+
+    public ComponentManager(int maxEntities) {
+        rand = new Random();
+        PositionArray = new Position[maxEntities];
+        HealthArray = new Health[maxEntities];
+        ColourArray = new Colour[maxEntities];
     }
 
-    public void CreateEntityComponents(int EntityID, int x, int y, int health) {
-        PositionArray[EntityID].x = x;
-        PositionArray[EntityID].y = y; 
-        HealthArray[EntityID].health = health;
+    public void CreateEntityComponents(int entityID, int x, int y, int health) {
+        PositionArray[entityID].x = x;
+        PositionArray[entityID].y = y;
+        HealthArray[entityID].health = health;
+        ColourArray[entityID].colourIndex = (byte)rand.Next(0, Colours.Palette.Length);
     }
 
-    public Position GetEntityPosition(int EntityID) {
-        return PositionArray[EntityID];
-    }
-
-    public Health GetEntityHealth(int EntityID) {
-        return HealthArray[EntityID];
-    }
-
+    public ref Position GetEntityPositionRef(int entityID) => ref PositionArray[entityID];
+    public ref Health GetEntityHealthRef(int entityID) => ref HealthArray[entityID];
 }
 
+// -------------------- GAME CLASS --------------------
+
 public class Game {
-    const int MaxEntities = 100;
-    public EntityManager EntityManager;
-    public ComponentManager ComponentManager;
+    public readonly EntityManager EntityManager;
+    public readonly ComponentManager ComponentManager;
+    private readonly Random rand;
+
     public Game() {
-        EntityManager = new EntityManager(MaxEntities);
-        ComponentManager = new ComponentManager(MaxEntities);
+        EntityManager = new EntityManager(Settings.EntitiesToSpawn);
+        ComponentManager = new ComponentManager(Settings.EntitiesToSpawn);
+        rand = new Random();
     }
 
-    public void SpawnEntity() {
-        int FreeID = EntityManager.GetFreeEntityID();
-        if (FreeID == -1) {
-            return;
-        }
-        EntityManager.AddEntity(FreeID);
-        ComponentManager.CreateEntityComponents(FreeID, 1, 1, 10);
-    }
+    public void SpawnEntity(int x, int y) {
+        int freeID = EntityManager.GetFreeEntityID();
+        if (freeID == -1) return;
 
+        EntityManager.AddEntity(freeID);
+        ComponentManager.CreateEntityComponents(freeID, x, y, 10);
+    }
     public void MoveEntities() {
-        foreach (Entity entity in EntityManager.Entities) {
-            int id = entity.EntityID;
-            ComponentManager.PositionArray[id].x += 1;
-            ComponentManager.PositionArray[id].y += 1;
+        for (int i = 0; i < EntityManager.EntityCount; i++) {
+            int id = EntityManager.Entities[i].EntityID;
+            ref var pos = ref ComponentManager.PositionArray[id];
+
+            pos.x += rand.Next(Settings.EntitySpeedMin, Settings.EntitySpeedMax); 
+            pos.y += rand.Next(Settings.EntitySpeedMin, Settings.EntitySpeedMax);
+
+            if (pos.x < 0) pos.x = Settings.ScreenWidth - 1;
+            if (pos.x > Settings.ScreenWidth - 1) pos.x = 0;
+
+            if (pos.y < 0) pos.y = Settings.ScreenHeight - 1;
+            if (pos.y > Settings.ScreenHeight - 1) pos.y = 0;
+        }
+    }
+}
+
+// -------------------- GAME WINDOW --------------------
+
+public class GameWindow : Form {
+    private readonly Game game;
+    private readonly System.Windows.Forms.Timer timer;
+    private readonly Random random;
+
+    public GameWindow() {
+        Text = "ECS Demo";
+        DoubleBuffered = true;
+        Width = Settings.ScreenWidth;
+        Height = Settings.ScreenHeight;
+
+        game = new Game();
+        random = new Random();
+
+        for (int i = 0; i < Settings.EntitiesToSpawn; i++) {
+            game.SpawnEntity(random.Next(0, Settings.ScreenWidth), random.Next(0, Settings.ScreenHeight));
+
         }
 
+        timer = new System.Windows.Forms.Timer();
+        timer.Interval = 16;
+        timer.Tick += Update;
+        timer.Start();
     }
 
-    public void DamageEntity(int ID) {
-            ComponentManager.HealthArray[ID].health -= 1;
+    private void Update(object sender, EventArgs e) {
+        game.MoveEntities();
+        Invalidate();
+    }
+
+    protected override void OnPaint(PaintEventArgs e) {
+        base.OnPaint(e);
+
+        for (int i = 0; i < game.EntityManager.EntityCount; i++) {
+            int id = game.EntityManager.Entities[i].EntityID;
+            ref var pos = ref game.ComponentManager.PositionArray[id];
+            var brush = Colours.Palette[game.ComponentManager.ColourArray[id].colourIndex];
+
+            e.Graphics.FillRectangle(brush, pos.x, pos.y, Settings.EntitySize, Settings.EntitySize);
+        }
     }
 }
